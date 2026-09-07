@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>对白翻译工作台</title>
+<style>
+  * { box-sizing: border-box; }
+  body { font-family: "Microsoft YaHei", system-ui, sans-serif; margin: 0; background:#f5f6f8; color:#222; }
+  header { position: sticky; top:0; background:#fff; border-bottom:1px solid #e3e5e8; padding:10px 18px;
+           display:flex; align-items:center; gap:14px; z-index:5; }
+  header h1 { font-size:17px; margin:0; }
+  header .sub { color:#888; font-size:12px; }
+  header .sp { flex:1; }
+  button { font: inherit; cursor:pointer; }
+  .btn { background:#2563eb; color:#fff; border:0; border-radius:8px; padding:8px 16px; font-size:14px; }
+  .btn:disabled { background:#b9c7e8; cursor:default; }
+  .btn.sec { background:#fff; color:#2563eb; border:1px solid #2563eb; }
+  .btn.sm { background:#2563eb; color:#fff; border:0; border-radius:7px; padding:5px 12px; font-size:13px; }
+  .btn.sm.grey { background:#eee; color:#555; }
+  .btn.sm:disabled { background:#b9c7e8; }
+  #modal { position:fixed; inset:0; z-index:20; }
+  .mback { position:absolute; inset:0; background:rgba(15,23,42,.4); }
+  .mbox { position:relative; margin:7vh auto 0; width:min(760px,94vw); max-height:82vh;
+          background:#fff; border-radius:12px; overflow:hidden; display:flex; flex-direction:column; }
+  .mtitle { padding:14px 18px; border-bottom:1px solid #eee; font-size:15px; font-weight:700;
+            display:flex; align-items:center; }
+  .mtitle .x { margin-left:auto; border:0; background:#eee; border-radius:50%; width:26px; height:26px; cursor:pointer; }
+  .mrow { padding:12px 18px; display:flex; gap:8px; }
+  .mrow input { flex:1; border:1px solid #dfe2e6; border-radius:8px; padding:8px 10px; font-size:13px; }
+  .mref { padding:0 18px 10px; display:flex; align-items:center; gap:12px; font-size:12px; color:#888; }
+  .mref .link { border:0; background:none; color:#2563eb; cursor:pointer; font-size:12px; }
+  .slist { overflow:auto; padding:0 12px 14px; }
+  .srow { display:flex; align-items:center; gap:10px; border:1px solid #eceef0; border-radius:9px;
+          padding:8px 10px; margin:6px 0; font-size:13px; }
+  .srow .nm { flex:1; word-break:break-all; }
+  .srow .st { font-size:11px; padding:2px 8px; border-radius:999px; white-space:nowrap; }
+  .st.cand { background:#d9f5e2; color:#0a7a3c; }
+  .st.single{ background:#e7f0ff; color:#1d4ed8; }
+  .st.none { background:#fdecec; color:#b91c1c; }
+  .st.now { background:#fdf3d8; color:#a16207; }
+  .nav { position:sticky; top:53px; background:#f5f6f8; padding:8px 18px; display:flex; gap:6px; flex-wrap:wrap; z-index:4; }
+  .nav a { text-decoration:none; background:#fff; border:1px solid #e0e2e5; border-radius:999px; padding:4px 12px; font-size:13px; color:#333; }
+  .nav a .n { color:#2563eb; font-weight:600; }
+  main { padding:6px 18px 80px; max-width:900px; margin:0 auto; }
+  .ep { margin:18px 0 4px; font-size:15px; font-weight:700; }
+  .ep .st { font-weight:400; font-size:12px; color:#999; margin-left:10px; }
+  .line { background:#fff; border:1px solid #e5e7ea; border-radius:10px; padding:10px 12px; margin:8px 0; }
+  .line.skip .zh, .line.skip textarea, .line.skip .opt { opacity:.35; }
+  .zh { font-size:15px; line-height:1.55; }
+  .zh .spk { color:#2563eb; font-weight:600; }
+  .opts { display:flex; gap:8px; margin-top:8px; flex-wrap:wrap; }
+  .opt { border:1px solid #dfe2e6; background:#fafbfc; border-radius:8px; padding:6px 10px; text-align:left;
+         min-width:40%; flex:1 1 40%; }
+  .opt .tag { font-size:11px; color:#666; display:block; }
+  .opt .txt { font-size:13px; color:#111; }
+  .opt.active { border-color:#2563eb; background:#eaf1ff; }
+  .opt.active .txt { color:#1d4ed8; }
+  textarea { width:100%; margin-top:8px; border:1px solid #dfe2e6; border-radius:8px; padding:8px;
+             font-size:14px; font-family:inherit; resize:vertical; min-height:44px; background:#fdfdfd; }
+  textarea.edited { border-color:#f59e0b; background:#fff8eb; }
+  .aux { display:flex; gap:12px; align-items:center; margin-top:6px; font-size:12px; color:#999; }
+  .aux label { cursor:pointer; }
+  .hint { font-size:12px; color:#bbb; margin-top:6px; }
+  .status { font-size:12px; color:#2563eb; }
+  #err { display:none; background:#fee2e2; color:#b91c1c; border:1px solid #fca5a5;
+         border-radius:8px; padding:10px 14px; margin:10px 18px 0; font-size:13px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>对白翻译工作台</h1>
+  <span class="sub" id="docxname"></span>
+  <span class="sp"></span>
+  <span class="status" id="savestat"></span>
+  <button class="btn sec" id="importBtn">导入剧本</button>
+  <button class="btn" id="exportBtn">确认并导出成品</button>
+</header>
+<div id="err"></div>
+<div class="nav" id="nav"></div>
+<main id="main"></main>
+
+<div id="modal" style="display:none">
+  <div class="mback" onclick="closeImport()"></div>
+  <div class="mbox">
+    <div class="mtitle">导入剧本
+      <span class="st" id="nowTag" style="display:none"></span>
+      <button class="x" onclick="closeImport()">×</button>
+    </div>
+    <div class="mrow">
+      <input id="pathInput" placeholder="或粘贴剧本完整路径，如 E:\desk\剧本(...）\xxx.docx">
+      <button class="btn sec" onclick="loadPath()">载入路径</button>
+    </div>
+    <div class="mref">
+      <button class="link" onclick="refreshScripts()">↻ 刷新列表</button>
+      <span>自动扫描：E:\desk、剧本、AI work、AI download</span>
+    </div>
+    <div id="slist" class="slist"></div>
+  </div>
+</div>
+
+<script>
+let DATA=null, timer=null;
+const $=s=>document.querySelector(s);
+
+async function api(path, body){
+  const r=await fetch(path,{method: body? 'POST':'GET',
+    headers:{'Content-Type':'application/json'},
+    body: body? JSON.stringify(body): undefined});
+  return r.json();
+}
+async function load(){ DATA=await api('/api/data'); render(); }
+function saveStat(msg){ $('#savestat').textContent=msg||''; }
+
+function render(){
+  $('#docxname').textContent='剧本：'+DATA.docx;
+  const main=$('#main'); const nav=$('#nav');
+  main.innerHTML=''; nav.innerHTML='';
+  DATA.episodes.forEach(ep=>{
+    const done=ep.lines.filter(l=>!l.skip && l.text).length;
+    const h=document.createElement('div'); h.className='ep';
+    h.innerHTML=`第${ep.ep}集 <span class="st" id="st${ep.ep}">${done}/${ep.lines.length}</span>`;
+    main.appendChild(h);
+    const a=document.createElement('a'); a.href='#ep'+ep.ep; a.id='ep'+ep.ep; nav.appendChild(a);
+    h.id='anch'+ep.ep;
+    ep.lines.forEach((ln,k)=>{
+      h.appendChild(lineEl(ep,ln));
+    });
+  });
+  // 锚点放到 ep 标题
+  DATA.episodes.forEach(ep=>{ const t=document.getElementById('anch'+ep.ep); if(t) t.id=''; });
+}
+function lineEl(ep,ln){
+  const div=document.createElement('div'); div.className='line'+(ln.skip?' skip':'');
+  div.dataset.idx=ln.idx; div.dataset.ep=ep.ep;
+  const head=ln.zh.split('：'); const spk=head[0]+'：';
+  const txt=ln.zh.slice(head[0].length+1);
+  div.innerHTML=`
+    <div class="zh"><span class="spk"></span><span class="body"></span></div>
+    <div class="opts">
+      <button class="opt A"><span class="tag">A · 推荐</span><span class="txt"></span></button>
+      <button class="opt B" style="display:none"><span class="tag">B · 备选</span><span class="txt"></span></button>
+    </div>
+    <textarea spellcheck="false"></textarea>
+    <div class="aux">
+      <label><input type="checkbox" class="skipcb"> 跳过这句（不译/保留中文）</label>
+      <span class="mark"></span>
+    </div>`;
+  div.querySelector('.spk').textContent=spk;
+  div.querySelector('.body').textContent=txt;
+  const oa=div.querySelector('.opt.A'), ob=div.querySelector('.opt.B');
+  const ta=div.querySelector('textarea');
+  if(ln.rec){ oa.querySelector('.txt').textContent=ln.rec; oa.style.display=''; }
+  else oa.style.display='none';
+  if(ln.alt){ ob.querySelector('.txt').textContent=ln.alt; ob.style.display=''; } else ob.style.display='none';
+  oa.onclick=()=>set(ln, oa, ta, ln.rec);
+  if(ln.alt) ob.onclick=()=>set(ln, ob, ta, ln.alt);
+  // 展示当前
+  if(!ln.skip){
+    ta.value=ln.text||'';
+    if(ln.text) { ta.classList.add('edited'); }
+    if(ln.src==='A'||ln.src==='B'){ (ln.src==='A'?oa:ob).classList.add('active'); }
+  }
+  ta.addEventListener('input',()=>{ ta.classList.add('edited');
+    clearTimeout(timer); timer=setTimeout(()=>saveChoice(ln.idx,ta.value),600); });
+  const cb=div.querySelector('.skipcb'); cb.checked=ln.skip;
+  cb.onchange=()=>saveSkip(ln.idx, cb.checked, div);
+  return div;
+}
+async function set(ln,btn,ta,val){
+  ta.value=val; ta.classList.add('edited');
+  await saveChoice(ln.idx,val);
+  document.querySelectorAll(`.line[data-idx="${ln.idx}"] .opt`).forEach(x=>x.classList.remove('active'));
+  btn.classList.add('active');
+}
+async function saveChoice(idx,text){
+  await api('/api/choice',{idx,text}); saveStat('已保存');
+}
+async function saveSkip(idx,skip,div){
+  await api('/api/choice',{idx,skip});
+  div.classList.toggle('skip',skip); saveStat('已保存'); refreshEpCount(div.dataset.ep);
+}
+function refreshEpCount(ep){
+  const all=[...document.querySelectorAll(`.line[data-ep="${ep}"]`)];
+  const done=all.filter(d=>!d.classList.contains('skip') && d.querySelector('textarea').value.trim()).length;
+  const el=document.getElementById('st'+ep); if(el) el.textContent=`${done}/${all.length}`;
+}
+function showErr(m){ const e=$('#err'); e.style.display='block'; e.textContent=m; }
+
+function openImport(){ $('#modal').style.display='block'; refreshScripts(); }
+function closeImport(){ $('#modal').style.display='none'; }
+const ST_TXT={'candidates':['双候选','cand'],'single':['单译','single'],'none':['未翻译','none']};
+async function refreshScripts(){
+  const box=$('#slist'); box.innerHTML='<div style="padding:10px;color:#888">读取中…</div>';
+  const r=await api('/api/scripts');
+  const cur=(DATA&&DATA.path)||'';
+  $('#nowTag').textContent='当前：'+(DATA&&DATA.docx); $('#nowTag').style.display=cur?'':'none';
+  box.innerHTML='';
+  (r.scripts||[]).forEach(s=>{
+    const row=document.createElement('div'); row.className='srow';
+    const [tag,cls]=ST_TXT[s.state]||['',''];
+    const isNow=s.path===cur;
+    row.innerHTML=`<div class="nm">${s.name}</div>
+      <span class="st ${isNow?'now':cls}">${isNow?'当前':tag}${s.ep?' · '+s.ep+'集':''}</span>`;
+    if(!isNow){
+      const b=document.createElement('button'); b.className='btn sm';
+      if(s.state==='none'){ b.textContent='翻译并载入'; b.onclick=()=>doTranslate(s,b); }
+      else { b.textContent='载入'; b.onclick=()=>doLoad(s,b); }
+      row.appendChild(b);
+    }
+    box.appendChild(row);
+  });
+  if(!(r.scripts||[]).length) box.innerHTML='<div style="padding:10px;color:#888">没找到 docx</div>';
+}
+async function doLoad(s,b){ b.disabled=true; b.textContent='载入中…';
+  try{ const r=await api('/api/load',{path:s.path}); DATA=r.data; closeImport(); render(); }
+  catch(e){ alert('载入失败：'+e.message); }
+}
+async function doTranslate(s,b){ b.disabled=true; b.textContent='翻译中(约1分钟/集)…';
+  try{ const r=await api('/api/translate',{path:s.path}); DATA=r.data; closeImport(); render();
+       saveStat('已翻译并载入：'+DATA.docx); }
+  catch(e){ alert('翻译失败：'+e.message); }
+}
+async function loadPath(){ const v=$('#pathInput').value.trim();
+  if(!v){ alert('先粘贴 docx 路径'); return; }
+  const b={textContent:'载入中…'}; await doLoad({name:v.split(/[\\/]/).pop(),path:v},b);
+}
+$('#importBtn').onclick=openImport;
+async function boot(){
+  try{ await load(); }
+  catch(err){
+    showErr('打不开数据（'+err+'）。\n请先运行后端再访问，不要直接双击 index.html：\n'+
+      '  cd E:\\desk\\对白翻译工作台\\ && python server.py\n'+
+      '然后浏览器打开 http://127.0.0.1:8100');
+  }
+}
+$('#exportBtn').onclick=async ()=>{
+  const b=$('#exportBtn'); b.disabled=true; b.textContent='导出中…';
+  const r=await api('/api/export',{});
+  b.disabled=false; b.textContent='确认并导出成品';
+  alert(`完成：${r.lines} 句已导出\nWord: ${r.docx}\n纯英txt: ${r.txt}`);
+};
+boot();
+</script>
+</body>
+</html>
