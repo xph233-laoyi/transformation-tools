@@ -1,3 +1,11 @@
+# 剧本对白翻译
+
+仓库含两个形态：
+- **🌐 在线版（本仓库根目录 → GitHub Pages）**：`index.html` + `docx.js` + `translate.js` + `app.js`，**纯浏览器运行**，`https://xph233-laoyi.github.io/transformation-tools/`。访客上传中文 docx，填**自己的 DeepSeek key**（key 只存访客浏览器、直连 DeepSeek，本静态站不保存/不中转任何 key 或剧本），逐集生成 A/B 候选、点选/手改/跳过、导出「中上英下 docx + 纯英 txt」。`sample/demo_script.docx` 是免 key 示例。
+- 本地工作台（见下，`对白翻译工作台/`，需 Python 后端在本机跑）。
+
+---
+
 # 剧本对白翻译 · 本地工作台
 
 把**纯中文的短剧 Word 剧本**批量翻成"**中上英下**"成品的一条龙本地工具（DeepSeek，可离线扩展）。

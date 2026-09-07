@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>对白翻译工作台 · 在线版</title>
+<style>
+  * { box-sizing: border-box; }
+  body { font-family: "Microsoft YaHei", system-ui, sans-serif; margin:0; background:#f5f6f8; color:#222; }
+  header { position:sticky; top:0; background:#fff; border-bottom:1px solid #e3e5e8; padding:10px 18px;
+           display:flex; align-items:center; gap:12px; flex-wrap:wrap; z-index:5; }
+  header h1 { font-size:17px; margin:0; }
+  header .online { font-size:11px; background:#d9f5e2; color:#0a7a3c; border-radius:999px; padding:2px 8px; }
+  header .sp { flex:1; }
+  button { font:inherit; cursor:pointer; }
+  .btn { background:#2563eb; color:#fff; border:0; border-radius:8px; padding:8px 16px; font-size:14px; }
+  .btn:disabled { background:#b9c7e8; cursor:default; }
+  .btn.sec { background:#fff; color:#2563eb; border:1px solid #2563eb; }
+  .btn.sm { background:#2563eb; color:#fff; border:0; border-radius:7px; padding:5px 12px; font-size:13px; }
+  .btn.sm.grey { background:#eee; color:#555; }
+  .btn.sm:disabled { background:#b9c7e8; }
+  .cfg { position:sticky; top:53px; background:#fff; border-bottom:1px solid #e3e5e8; padding:8px 18px;
+         display:flex; align-items:center; gap:10px; flex-wrap:wrap; z-index:4; font-size:13px; }
+  .cfg label { color:#666; }
+  .cfg input { border:1px solid #dfe2e6; border-radius:8px; padding:6px 8px; font-size:13px; }
+  #key { width:280px; max-width:38vw; font-family:monospace; }
+  #model { width:170px; }
+  .cfg .hint { color:#999; font-size:12px; width:100%; }
+  #drop { border:2px dashed #b7c3dd; border-radius:12px; padding:46px 20px; margin:40px auto; max-width:640px;
+          text-align:center; background:#fff; }
+  #drop.on { border-color:#2563eb; background:#eef3ff; }
+  #drop h2 { margin:0 0 6px; font-size:18px; }
+  #drop p { color:#888; margin:6px 0; }
+  .status { font-size:12px; color:#2563eb; }
+  #err { display:none; background:#fee2e2; color:#b91c1c; border:1px solid #fca5a5;
+         border-radius:8px; padding:10px 14px; margin:10px 18px 0; font-size:13px; white-space:pre-wrap; }
+  .nav { position:sticky; top:106px; background:#f5f6f8; padding:8px 18px; display:flex; gap:6px;
+         flex-wrap:wrap; z-index:4; }
+  .nav a { text-decoration:none; background:#fff; border:1px solid #e0e2e5; border-radius:999px;
+           padding:4px 12px; font-size:13px; color:#333; }
+  main { padding:6px 18px 90px; max-width:900px; margin:0 auto; }
+  .ep { margin:18px 0 4px; font-size:15px; font-weight:700; display:flex; align-items:center; gap:10px; }
+  .ep .st { font-weight:400; font-size:12px; color:#999; }
+  .line { background:#fff; border:1px solid #e5e7ea; border-radius:10px; padding:10px 12px; margin:8px 0; }
+  .line.skip .zh, .line.skip textarea, .line.skip .opt { opacity:.35; }
+  .zh { font-size:15px; line-height:1.55; }
+  .zh .spk { color:#2563eb; font-weight:600; }
+  .opts { display:flex; gap:8px; margin-top:8px; flex-wrap:wrap; }
+  .opt { border:1px solid #dfe2e6; background:#fafbfc; border-radius:8px; padding:6px 10px; text-align:left;
+         min-width:40%; flex:1 1 40%; }
+  .opt .tag { font-size:11px; color:#666; display:block; }
+  .opt .txt { font-size:13px; color:#111; }
+  .opt.active { border-color:#2563eb; background:#eaf1ff; }
+  .opt.active .txt { color:#1d4ed8; }
+  textarea { width:100%; margin-top:8px; border:1px solid #dfe2e6; border-radius:8px; padding:8px;
+             font-size:14px; font-family:inherit; resize:vertical; min-height:44px; background:#fdfdfd; }
+  textarea.edited { border-color:#f59e0b; background:#fff8eb; }
+  .aux { display:flex; gap:12px; align-items:center; margin-top:6px; font-size:12px; color:#999; }
+  footer { max-width:900px; margin:0 auto; padding:0 18px 30px; color:#777; font-size:12px; line-height:1.7; }
+  footer b { color:#555; }
+</style>
+</head>
+<body>
+<header>
+  <h1>对白翻译工作台 <span class="online">在线版 · 自带key</span></h1>
+  <span class="sub" id="docxname" style="color:#888;font-size:13px"></span>
+  <span class="sp"></span>
+  <button class="btn sec" id="importBtn" style="display:none">导入剧本</button>
+  <button class="btn sec" id="translateAllBtn" style="display:none">全部翻译(逐集)</button>
+  <button class="btn sec" id="stopBtn" style="display:none">停止翻译</button>
+  <button class="btn" id="exportBtn" style="display:none">确认并导出成品</button>
+</header>
+
+<div class="cfg">
+  <label>DeepSeek API key</label>
+  <input id="key" type="password" placeholder="sk-..." autocomplete="off" spellcheck="false">
+  <button class="btn sm grey" id="keyVis">显示</button>
+  <button class="btn sm grey" id="checkKey">验证key</button>
+  <label>模型</label>
+  <input id="model" list="models" value="deepseek-v4-flash" spellcheck="false">
+  <datalist id="models">
+    <option value="deepseek-v4-flash"></option>
+    <option value="deepseek-chat"></option>
+    <option value="deepseek-reasoner"></option>
+  </datalist>
+  <span class="status" id="savestat"></span>
+  <span class="hint">你的 key 只存在<b>你本机浏览器</b>里，翻译时直接发往 DeepSeek，本站(纯静态 GitHub Pages)不保存、不中转任何 key 或剧本。</span>
+</div>
+<div id="err"></div>
+
+<section id="drop">
+  <h2>把中文短剧剧本拖进来</h2>
+  <p>支持 Word 剧本(.docx)：行内以「角色：台词」分行、第X集分集的常见格式。</p>
+  <p><button class="btn" id="pickBtn">选择 .docx 文件</button>
+     <input id="file" type="file" accept=".docx" style="display:none"></p>
+  <p>或 <button class="link" id="demoBtn" style="border:0;background:none;color:#2563eb;cursor:pointer;font-size:14px">试试示例剧本（无 key 也可先看界面）</button></p>
+</section>
+
+<div class="nav" id="nav" style="display:none"></div>
+<main id="main" style="display:none"></main>
+
+<footer>
+  <b>它怎么运作：</b>全部在你浏览器里完成——docx 本地解析 → 用你填的 key 逐集调 DeepSeek 生成 A/B 候选 → 你点选/手改/跳过 → 导出「中上英下 docx + 纯英 txt」。没有服务器，源码头在 <a href="https://github.com/xph233-laoyi/transformation-tools" target="_blank" rel="noopener">GitHub</a>。
+  翻译消耗的是你 DeepSeek 账户的额度；key 泄露风险请自行评估，建议用后到 DeepSeek 后台关闭/重置。
+</footer>
+
+<script src="assets/jszip.min.js"></script>
+<script src="docx.js"></script>
+<script src="translate.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
